@@ -103,7 +103,7 @@ const updateHolding_alma = async (mms_id, holding_id, xml) => {
     };
     return await axios.put(process.env.ALMA_API_URL + '/bibs/' + mms_id + '/holdings/' + holding_id, xml, postconfig)
   } catch (error) {
-        //console.error(error)
+        console.error(error)
         logger.log('error', error)
   }
 }
@@ -140,11 +140,16 @@ const updateHolding = async (mms_id, holding_id, Permanent_Call_Number) => {
         //Uppdatera Alma
         
         const holdingupdated = await updateHolding_alma(mms_id, holding_id, xml)
-        if (holdingupdated.data.indexOf("error") !== -1){
-            logger.log('error', holdingupdated.data);
-        } else {
-            logger.log('info', 'Holding ' + holding_id + ',call number updated to: ' + Permanent_Call_Number);
-            //console.log('Holding ' + holding_id + ',call number updated to: ' + Permanent_Call_Number)
+        try {
+            if (holdingupdated.data.indexOf("error") !== -1){
+                logger.log('error', holdingupdated.data);
+            } else {
+                logger.log('info', 'Holding ' + holding_id + ',call number updated to: ' + Permanent_Call_Number);
+                //console.log('Holding ' + holding_id + ',call number updated to: ' + Permanent_Call_Number)
+            }
+        } catch (error) {
+            //console.error(error)
+            logger.log('error', error)
         }
         
     }
@@ -163,32 +168,35 @@ const updateHolding = async (mms_id, holding_id, Permanent_Call_Number) => {
  * för uppdatering
  * 
  */
-
-holdings = []
-fs.createReadStream(process.env.CSV_FILE)
-    .pipe(csv.parse({ headers: true, delimiter: ';' }))
-    .on('error', error => logger.log('error', err))
-    .on('data', row => {
-        holdings.push(row) 
-    })
-    .on('end', rowCount => {
-        logger.log('info', 'Start!');
-        logger.log('info', `Parsed ${rowCount} rows`);
-        console.log(`Parsing ${rowCount} rows`)
-        async function processArray(holdings) {
-            i = 0
-            for (const item of holdings) {
-                //console.log(item);
-                await updateHolding(item.MMS_Id, item.Holding_Id, item.Permanent_Call_Number)
-                //logger.log('info',item.MMS_Id + ' ' + item.Holding_Id + ' ' + item.Permanent_Call_Number)
-                i++
-                //if (i>2) {
-                  //break;
-                //}
-                console.log( i + " av " + rowCount)
+if (process.env.RUN =='true') {
+    holdings = []
+    fs.createReadStream(process.env.CSV_FILE)
+        .pipe(csv.parse({ headers: true, delimiter: ';' }))
+        .on('error', error => logger.log('error', err))
+        .on('data', row => {
+            holdings.push(row) 
+        })
+        .on('end', rowCount => {
+            logger.log('info', 'Start!');
+            logger.log('info', `Parsed ${rowCount} rows`);
+            console.log(`Parsing ${rowCount} rows`)
+            async function processArray(holdings) {
+                i = 0
+                for (const item of holdings) {
+                    //console.log(item);
+                    await updateHolding(item.MMS_Id, item.Holding_Id, item.Permanent_Call_Number)
+                    //logger.log('info',item.MMS_Id + ' ' + item.Holding_Id + ' ' + item.Permanent_Call_Number)
+                    i++
+                    //if (i>2) {
+                    //break;
+                    //}
+                    console.log( i + " av " + rowCount)
+                }
+                logger.log('info', 'Done!');
+                console.log('Done!');
             }
-            logger.log('info', 'Done!');
-            console.log('Done!');
-          }
-        processArray(holdings)
-    });
+            processArray(holdings)
+        });
+} else {
+    console.log("Sätt environmentvariable RUN=true för att köra scriptet")
+}
