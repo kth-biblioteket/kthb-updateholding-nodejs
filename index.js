@@ -12,10 +12,25 @@
  */
 const winston = require('winston');
 
+const timezoned = () => {
+    var options = {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
+        timeZone: 'Europe/Stockholm'
+    };
+    return new Date().toLocaleString('sv-SE', options);
+};
+
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
-        winston.format.timestamp(),
+        winston.format.timestamp({
+            format: timezoned
+          }),
         winston.format.json()
     ),
     defaultMeta: { service: 'user-service' },
@@ -101,12 +116,12 @@ const updateHolding_alma = async (mms_id, holding_id, xml) => {
  */
 const updateHolding = async (mms_id, holding_id, Permanent_Call_Number) => {
     const holding = await getHolding_alma(mms_id, holding_id)
-    //console.log(holding)
     if (!holding.data){
         console.log(holding)
         logger.log('error', holding);
     } else {
         var xml
+        //console.log(holding.data)
         //Gör om XML till JSON
         parseString(holding.data, function(err, result) {
             if (err) logger.log('error', err);
@@ -123,7 +138,7 @@ const updateHolding = async (mms_id, holding_id, Permanent_Call_Number) => {
         });
 
         //Uppdatera Alma
-        /*
+        
         const holdingupdated = await updateHolding_alma(mms_id, holding_id, xml)
         if (holdingupdated.data.indexOf("error") !== -1){
             logger.log('error', holdingupdated.data);
@@ -131,7 +146,7 @@ const updateHolding = async (mms_id, holding_id, Permanent_Call_Number) => {
             logger.log('info', 'Holding ' + holding_id + ',call number updated to: ' + Permanent_Call_Number);
             //console.log('Holding ' + holding_id + ',call number updated to: ' + Permanent_Call_Number)
         }
-        */
+        
     }
      
 }
@@ -163,13 +178,14 @@ fs.createReadStream(process.env.CSV_FILE)
         async function processArray(holdings) {
             i = 0
             for (const item of holdings) {
-              await updateHolding(item.MMS_Id, item.Holding_Id, item.Permanent_Call_Number)
-              //logger.log('info',item.MMS_Id + ' ' + item.Holding_Id + ' ' + item.Permanent_Call_Number)
-              //if (i>100) {
-                //  break
-              //}
-              i++
-              console.log(i);
+                //console.log(item);
+                await updateHolding(item.MMS_Id, item.Holding_Id, item.Permanent_Call_Number)
+                //logger.log('info',item.MMS_Id + ' ' + item.Holding_Id + ' ' + item.Permanent_Call_Number)
+                i++
+                //if (i>2) {
+                  //break;
+                //}
+                console.log( i + " av " + rowCount)
             }
             logger.log('info', 'Done!');
             console.log('Done!');
